@@ -25,10 +25,11 @@ task("releaseNeeded") {
         println "Checking if release is needed..."
         def pr = System.env.TRAVIS_PULL_REQUEST
         def ci = System.env.CI
-//        ext.needed = dryRun || (pr == 'false' && branch == 'master' && isTriggerInCommit) || (ci == null && pr == null && localRelease)
-        ext.needed = dryRun || (pr == 'false' /*&& branch == 'master'*/  && isTriggerInCommit) || (ci == null && pr == null && localRelease)  //TODO: master is ok in sandbox project
-        logger.lifecycle("Release needed: {}, branch: {}, pull request: {}, dry run: {}, ci: {}, isTriggerInCommit: {}, localRelease: {}.",
-                needed, branch, pr, dryRun, ci, isTriggerInCommit, localRelease)
+        def skipRelease = System.env.SKIP_RELEASE
+//        ext.needed = skipRelease == null && (dryRun || (pr == 'false' && branch == 'master' && isTriggerInCommit) || (ci == null && pr == null && localRelease))
+        ext.needed = skipRelease == null && (dryRun || (pr == 'false' /*&& branch == 'master'*/  && isTriggerInCommit) || (ci == null && pr == null && localRelease))  //TODO: master is ok in sandbox project
+        logger.lifecycle("Release needed: {}, skipRelease: {}, branch: {}, pull request: {}, dry run: {}, ci: {}, isTriggerInCommit: {}, localRelease: {}.",
+                needed, skipRelease, branch, pr, dryRun, ci, isTriggerInCommit, localRelease)
     }
 }
 
