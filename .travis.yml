@@ -1,0 +1,24 @@
+language: groovy
+
+jdk:
+- oraclejdk8
+
+before_install:
+- git --version
+
+install:
+- ./gradlew assemble
+
+script:
+- set -e
+- ./gradlew check --info --stacktrace --continue
+- source src/main/resources/gradle/setGitVariables.sh
+- ./gradlew release -Prelease.disableRemoteCheck -Prelease.localOnly --info --stacktrace
+- ./gradlew finalizeRelease publishUploadedArtifacts -PbintrayUser=${BINTRAY_USER} -PbintrayKey=${BINTRAY_API_KEY} --info --stacktrace
+
+env:
+  global:
+  - TERM=dumb
+  - secure: S39OzAmB8eajw0LNlVaDnB1xxlwcDZNrlbsA3CTYAPCkB/mJVCwyGcQsqYsrtWBh/7HpbjyLA/FE9G5n1Xa/vOUxRoN/OZJLVUOGNnHuJgLyVoO8mFk2gSc1cdzTjscRRKB2uRLB9tggWfOwlRXttRsSUfDRB/fDOm3uumgA2EU=
+  - secure: HdxuhA7jGTkNfQfuBP9TrfkXkYUzPS1AgMjtKyxGXdOHUxLYzSOArut0LGnJzLEKYKDPIXlXbc57K7x8iZ6vHhFf2O/UjUdmSPVuJFZCiFBidC7/8vtkSVLincvr9yJEhP4TKR2ownZFhFupjGrvtbtqGjCkwVy5qvgJGcgOHL0=
+  - secure: jzR5cJ4DqemfIDorVjIjoCAcXNmjrWX5VPXdMgL5cYeu9IfHdkxJ54DwPOGRs2YNmgvzZRPHhmdYYzl9hZ2QMeb6kuHsH052DrWxKl0JTruZivcTFb2KlAOSxBhwvjYl1rX5TdIBNYlarM5I8C20yuwS8rXeKRRyjDiFWA2+xsA=

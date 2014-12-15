@@ -1,0 +1,138 @@
+//Based on release.gradle from Mockito project by Szczepan Faber - https://github.com/mockito/mockito
+assert project == rootProject
+
+//To allow to use GrGit and RestTask classes as 'buildscript' closure has to be in every included file
+buildscript {
+    repositories {
+        mavenLocal()
+        jcenter()
+    }
+    dependencies {
+        classpath "pl.allegro.tech.build:axion-release-plugin:0.9.9"
+        classpath "org._10ne.gradle:rest-gradle-plugin:0.3.1"
+    }
+}
+
+//apply from: rootProject.file("gradle/publish.gradle")
+
+def dryRun = project.hasProperty('dryRun')
+def branch = System.env.TRAVIS_BRANCH
+boolean localRelease = project.hasProperty("localRelease")
+boolean isTriggerInCommit = isReleaseTriggerInLastCommitMessage(localRelease)
+
+task("releaseNeeded") {
+    doLast {
+        println "Checking if release is needed..."
+        def pr = System.env.TRAVIS_PULL_REQUEST
+        def ci = System.env.CI
+//        ext.needed = dryRun || (pr == 'false' && branch == 'master' && isTriggerInCommit) || (ci == null && pr == null && localRelease)
+        ext.needed = dryRun || (pr == 'false' /*&& branch == 'master'*/  && isTriggerInCommit) || (ci == null && pr == null && localRelease)  //TODO: master is ok in sandbox project
+        logger.lifecycle("Release needed: {}, branch: {}, pull request: {}, dry run: {}, ci: {}, isTriggerInCommit: {}, localRelease: {}.",
+                needed, branch, pr, dryRun, ci, isTriggerInCommit, localRelease)
+    }
+}
+
+bintrayUpload {
+    dependsOn releaseNeeded
+    onlyIf { releaseNeeded.needed }
+    doFirst {
+        if (dryRun) {
+            logger.lifecycle "Dry-running bintrayUpload"
+        }
+    }
+}
+
+release {
+    dependsOn releaseNeeded
+    onlyIf { releaseNeeded.needed }
+    //TODO: dryRun currently broken in Axion - -Drelease.dryRun has to be set as well
+    doFirst {
+        if (dryRun) {
+            println "release.dryRun: " + project.hasProperty("release.dryRun")
+            logger.lifecycle "Dry-running Axion release"
+        }
+    }
+}
+
+task("finalizeRelease") {
+    dependsOn bintrayUpload, releaseNeeded
+    onlyIf { releaseNeeded.needed }
+    doLast {
+        if (dryRun) {
+            logger.lifecycle "Dry-running finalizeRelease"
+        }
+        println "Finalizing release..."
+
+        def pushCommand = ["git", "push", "--follow-tags", "origin"]
+        if (!localRelease) {
+            pushCommand << "HEAD:${branch}"
+        }
+        if (dryRun) {
+            pushCommand << '--dry-run'
+        }
+
+        //TODO: Switch to grgit when problem with jgit and pushing with HTTPS is solved - https://github.com/allegro/axion-release-plugin/issues/32
+        runCommand pushCommand
+    }
+}
+
+task publishUploadedArtifacts(type: org._10ne.gradle.rest.RestTask) {
+    dependsOn releaseNeeded
+    mustRunAfter finalizeRelease
+    onlyIf { releaseNeeded.needed && !project.hasProperty('dryRun') }  //TODO: Not available in rest-gradle-plugin yet - https://github.com/noamt/rest-gradle-plugin/issues/9
+    httpMethod = 'post'
+    uri = "broken-should-be-overridden-in-do-frst"
+    username = project.hasProperty('bintrayUser') ? project.getProperty('bintrayUser') : System.properties['bintrayUser']
+    password = project.hasProperty('bintrayKey') ? project.getProperty('bintrayKey') : System.properties['bintrayKey']
+    contentType = groovyx.net.http.ContentType.JSON
+    requestBody = [discard: 'false']
+
+    doFirst {
+        println "RB: ${requestBody}"
+        //Update uri with 'bintray.pkg.repo' override in end project
+        uri = "https://api.bintray.com/content/4finance/${bintray.pkg.repo}/${project.name}/${project.version}/publish"
+    }
+}
+
+import org.ajoberstar.grgit.Commit
+import org.ajoberstar.grgit.Grgit
+
+private boolean isReleaseTriggerInLastCommitMessage(boolean isLocalRelease) {
+    final String RELEASE_TRIGGER = '#DO_RELEASE'    //[do release]?
+
+    def grgit = Grgit.open(getRootDir())
+    List<Commit> history = []
+
+    if (isLocalRelease) {
+        history = grgit.log(maxCommits: 1)
+    } else {
+        def travisBranch = System.env.TRAVIS_BRANCH
+        if (travisBranch != null) {
+            history = grgit.log(includes: [travisBranch], maxCommits: 1)
+        }
+    }
+
+    history.each { println "${it.id}: ${it.fullMessage}" }
+    return history[0]?.fullMessage?.contains(RELEASE_TRIGGER)
+}
+
+//Temporarily replaced with shell script. Should be run before Axion
+private void configureGit() {
+    runCommand "git", "config", "user.email", "4financebot@gmail.com"
+    runCommand "git", "config", "user.name", "4Finance Bot"
+    runCommand "git", "config", "push.default", "simple"
+    runCommand "git", "remote", "set-url", "origin", new MaskedArg(value: "https://${System.env.GH_TOKEN}@github.com/4finance/releasing-sandbox.git")
+}
+
+private void runCommand(Object ... args) {
+    runCommand(args as List)
+}
+private void runCommand(Collection args) {
+    logger.lifecycle("--- Executing: {}", args.join(" "))
+    exec { commandLine args.collect { it instanceof MaskedArg? it.value : it.toString()} }
+    logger.lifecycle("--- Completed!", args)
+}
+class MaskedArg {
+    String value
+    String toString() { "<masked>" }
+}
