@@ -64,7 +64,7 @@ task("finalizeRelease") {
         }
         println "Finalizing release..."
 
-        def pushCommand = ["git", "push", "--follow-tags", "origin"]
+        def pushCommand = ["git", "push", "--follow-tags", "origin", "-q"]
         if (!localRelease) {
             pushCommand << "HEAD:${branch}"
         }
