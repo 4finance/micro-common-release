@@ -99,7 +99,7 @@ import org.ajoberstar.grgit.Commit
 import org.ajoberstar.grgit.Grgit
 
 private boolean isReleaseTriggerInLastCommitMessage(boolean isLocalRelease) {
-    final String RELEASE_TRIGGER = '#DO_RELEASE'    //[do release]?
+    final String RELEASE_TRIGGER = '[#DO_RELEASE]'
 
     def grgit = Grgit.open(getRootDir())
     List<Commit> history = []
