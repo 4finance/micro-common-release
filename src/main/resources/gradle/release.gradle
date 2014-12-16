@@ -26,9 +26,9 @@ task("releaseNeeded") {
         def pr = System.env.TRAVIS_PULL_REQUEST
         def ci = System.env.CI
         def skipRelease = System.env.SKIP_RELEASE
-//        ext.needed = skipRelease == null && (dryRun || (pr == 'false' && branch == 'master' && isTriggerInCommit) || (ci == null && pr == null && localRelease))
-        ext.needed = skipRelease == null && (dryRun || (pr == 'false' /*&& branch == 'master'*/  && isTriggerInCommit) || (ci == null && pr == null && localRelease))  //TODO: master is ok in sandbox project
-        logger.lifecycle("Release needed: {}, skipRelease: {}, branch: {}, pull request: {}, dry run: {}, ci: {}, isTriggerInCommit: {}, localRelease: {}.",
+//        ext.needed = isNullOrFalse(skipRelease) && (dryRun || (isNullOrFalse(pr) && branch == 'master' && isTriggerInCommit) || (isNullOrFalse(ci) && isNullOrFalse(pr) && localRelease))
+        ext.needed = isNullOrFalse(skipRelease) && (dryRun || (isNullOrFalse(pr) /*&& branch == 'master'*/ && isTriggerInCommit) || (isNullOrFalse(ci) && isNullOrFalse(pr) && localRelease))   //TODO: master is ok in sandbox project
+        logger.lifecycle("Release needed: {}, skipRelease: {}, branch: {}, pull request: {}, dryRun: {}, ci: {}, isTriggerInCommit: {}, localRelease: {}.",
                 needed, skipRelease, branch, pr, dryRun, ci, isTriggerInCommit, localRelease)
     }
 }
@@ -136,4 +136,8 @@ private void runCommand(Collection args) {
 class MaskedArg {
     String value
     String toString() { "<masked>" }
+}
+
+private boolean isNullOrFalse(def env) {
+    env == null || env == "false" || (env instanceof Boolean && !env)
 }
