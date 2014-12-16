@@ -26,8 +26,7 @@ task("releaseNeeded") {
         def pr = System.env.TRAVIS_PULL_REQUEST
         def ci = System.env.CI
         def skipRelease = System.env.SKIP_RELEASE
-//        ext.needed = isNullOrFalse(skipRelease) && (dryRun || (isNullOrFalse(pr) && branch == 'master' && isTriggerInCommit) || (isNullOrFalse(ci) && isNullOrFalse(pr) && localRelease))
-        ext.needed = isNullOrFalse(skipRelease) && (dryRun || (isNullOrFalse(pr) /*&& branch == 'master'*/ && isTriggerInCommit) || (isNullOrFalse(ci) && isNullOrFalse(pr) && localRelease))   //TODO: master is ok in sandbox project
+        ext.needed = isNullOrFalse(skipRelease) && (dryRun || (isNullOrFalse(pr) && branch == 'master' && isTriggerInCommit) || (isNullOrFalse(ci) && isNullOrFalse(pr) && localRelease))
         logger.lifecycle("Release needed: {}, skipRelease: {}, branch: {}, pull request: {}, dryRun: {}, ci: {}, isTriggerInCommit: {}, localRelease: {}.",
                 needed, skipRelease, branch, pr, dryRun, ci, isTriggerInCommit, localRelease)
     }
