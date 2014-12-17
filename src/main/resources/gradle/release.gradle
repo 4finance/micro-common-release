@@ -17,6 +17,8 @@ buildscript {
 
 def dryRun = project.hasProperty('dryRun')
 def branch = System.env.TRAVIS_BRANCH
+def ghToken = System.env.GH_TOKEN
+def ghUser = System.env.GH_USER ?: "4financeBot"
 boolean localRelease = project.hasProperty("localRelease")
 boolean isTriggerInCommit = isReleaseTriggerInLastCommitMessage(localRelease)
 
@@ -54,6 +56,10 @@ release {
     }
 }
 
+import org.ajoberstar.grgit.Commit
+import org.ajoberstar.grgit.Grgit
+import org.ajoberstar.grgit.Credentials
+
 task("finalizeRelease") {
     dependsOn bintrayUpload, releaseNeeded
     onlyIf { releaseNeeded.needed }
@@ -63,16 +69,20 @@ task("finalizeRelease") {
         }
         println "Finalizing release..."
 
-        def pushCommand = ["git", "push", "--follow-tags", "origin", "-q"]
+        Grgit grgit
+        def pushParams = [tags: true, remote: "origin"]
         if (!localRelease) {
-            pushCommand << "HEAD:${branch}"
-        }
-        if (dryRun) {
-            pushCommand << '--dry-run'
+            grgit = Grgit.open(getRootDir(), new Credentials(ghUser, ghToken))
+            pushParams << [refsOrSpecs: ["HEAD:${branch}"]]
+        } else {
+            grgit = Grgit.open(getRootDir())
         }
 
-        //TODO: Switch to grgit when problem with jgit and pushing with HTTPS is solved - https://github.com/allegro/axion-release-plugin/issues/32
-        runCommand pushCommand
+        if (dryRun) {   //TODO: GrGit push does not support real dryRun mode - https://github.com/ajoberstar/grgit/pull/44
+            println "Dry-running push to GH with tags"
+        } else {
+            grgit.push(pushParams)
+        }
     }
 }
 
@@ -93,9 +103,6 @@ task publishUploadedArtifacts(type: org._10ne.gradle.rest.RestTask) {
         uri = "https://api.bintray.com/content/4finance/${bintray.pkg.repo}/${project.name}/${project.version}/publish"
     }
 }
-
-import org.ajoberstar.grgit.Commit
-import org.ajoberstar.grgit.Grgit
 
 private boolean isReleaseTriggerInLastCommitMessage(boolean isLocalRelease) {
     final String RELEASE_TRIGGER = '[#DO_RELEASE]'
