@@ -17,7 +17,7 @@ buildscript {
 
 def dryRun = project.hasProperty('dryRun')
 def branch = System.env.TRAVIS_BRANCH
-def ghToken = System.env.GH_TOKEN
+def ghToken = System.env.GH_TOKEN ?: ""
 def ghUser = System.env.GH_USER ?: "4financeBot"
 boolean localRelease = project.hasProperty("localRelease")
 boolean isTriggerInCommit = isReleaseTriggerInLastCommitMessage(localRelease)
@@ -73,7 +73,7 @@ task("finalizeRelease") {
         def pushParams = [tags: true, remote: "origin"]
         if (!localRelease) {
             grgit = Grgit.open(getRootDir(), new Credentials(ghUser, ghToken))
-            pushParams << [refsOrSpecs: ["HEAD:${branch}"]]
+            pushParams << [refsOrSpecs: ["HEAD:refs/heads/${branch}"]]
         } else {
             grgit = Grgit.open(getRootDir())
         }
