@@ -8,7 +8,7 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath "pl.allegro.tech.build:axion-release-plugin:0.9.9"
+        classpath "pl.allegro.tech.build:axion-release-plugin:1.0.0"
         classpath "org._10ne.gradle:rest-gradle-plugin:0.3.1"
     }
 }
@@ -45,10 +45,8 @@ project.getTasksByName("bintrayUpload", true)*.configure {  //bintrayUpload {} f
 release {
     dependsOn releaseNeeded
     onlyIf { releaseNeeded.needed }
-    //TODO: dryRun currently broken in Axion - -Drelease.dryRun has to be set as well
     doFirst {
         if (dryRun) {
-            println "release.dryRun: " + project.hasProperty("release.dryRun")
             logger.lifecycle "Dry-running Axion release"
         }
     }
