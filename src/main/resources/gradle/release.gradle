@@ -32,6 +32,12 @@ task("releaseNeeded") {
     }
 }
 
+scmVersion {
+    createReleaseCommit = true
+    releaseCommitMessage { version, position -> "release version: ${version}\n\n[ci skip]" }
+    dryRun = project.hasProperty("dryRun")
+}
+
 project.getTasksByName("bintrayUpload", true)*.configure {  //bintrayUpload {} fails on multi-project builds with empty modules
     dependsOn releaseNeeded
     onlyIf { releaseNeeded.needed }

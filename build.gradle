@@ -16,9 +16,6 @@ scmVersion {
     tag {
         prefix = ''
     }
-    createReleaseCommit = true
-    releaseCommitMessage { version, position -> "release version: ${version}\n\n[ci skip]" }
-    dryRun = project.hasProperty("dryRun")
 }
 
 project.group = 'com.ofg'
