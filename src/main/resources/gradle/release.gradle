@@ -92,21 +92,23 @@ task("finalizeRelease") {
     }
 }
 
-task publishUploadedArtifacts(type: org._10ne.gradle.rest.RestTask) {
-    dependsOn releaseNeeded
-    mustRunAfter finalizeRelease
-    onlyIf { releaseNeeded.needed && !project.hasProperty('dryRun') }  //TODO: Not available in rest-gradle-plugin yet - https://github.com/noamt/rest-gradle-plugin/issues/9
-    httpMethod = 'post'
-    uri = "broken-should-be-overridden-in-do-frst"
-    username = project.hasProperty('bintrayUser') ? project.getProperty('bintrayUser') : System.properties['bintrayUser']
-    password = project.hasProperty('bintrayKey') ? project.getProperty('bintrayKey') : System.properties['bintrayKey']
-    contentType = groovyx.net.http.ContentType.JSON
-    requestBody = [discard: 'false']
+configure(uploadableProjects) {
+    task publishUploadedArtifacts(type: org._10ne.gradle.rest.RestTask) {
+        dependsOn releaseNeeded
+        mustRunAfter finalizeRelease
+        onlyIf { releaseNeeded.needed && !project.hasProperty('dryRun') }   //TODO: Not available in rest-gradle-plugin yet - https://github.com/noamt/rest-gradle-plugin/issues/9
+        httpMethod = 'post'
+        uri = "broken-should-be-overridden-in-do-frst"
+        username = project.hasProperty('bintrayUser') ? project.getProperty('bintrayUser') : System.properties['bintrayUser']
+        password = project.hasProperty('bintrayKey') ? project.getProperty('bintrayKey') : System.properties['bintrayKey']
+        contentType = groovyx.net.http.ContentType.JSON
+        requestBody = [discard: 'false']
 
-    doFirst {
-        println "RB: ${requestBody}"
-        //Update uri with 'bintray.pkg.repo' override in end project
-        uri = "https://api.bintray.com/content/4finance/${bintray.pkg.repo}/${project.name}/${project.version}/publish"
+        doFirst {
+            println "RB: ${requestBody}"
+            //Update uri with 'bintray.pkg.repo' override in end project
+            uri = "https://api.bintray.com/content/4finance/${bintray.pkg.repo}/${project.name}/${project.version}/publish"
+        }
     }
 }
 
