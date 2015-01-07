@@ -10,12 +10,10 @@ buildscript {
     }
 }
 
-apply plugin: 'pl.allegro.tech.build.axion-release'
+apply from: 'src/main/resources/gradle/version.gradle'
 
 scmVersion {
-    tag {
-        prefix = ''
-    }
+    tag { prefix = '' }
 }
 
 project.group = 'com.ofg'

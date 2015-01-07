@@ -32,12 +32,6 @@ task("releaseNeeded") {
     }
 }
 
-scmVersion {
-    createReleaseCommit = true
-    releaseCommitMessage { version, position -> "release version: ${version}\n\n[ci skip]" }
-    dryRun = project.hasProperty("dryRun")
-}
-
 //Workaround to "subprojects.bintrayUpload" failure on empty subprojects
 Set uploadableProjects = allprojects.findAll { sProject -> sProject.tasks.matching { it.name == "bintrayUpload" }}
 
