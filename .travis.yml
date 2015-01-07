@@ -5,6 +5,8 @@ jdk:
 
 before_install:
 - git --version
+- "echo $GRADLE_OPTS"
+- "export GRADLE_OPTS='-Dorg.gradle.daemon=true'"
 
 install:
 - ./gradlew assemble
