@@ -41,15 +41,38 @@ publishing {
                 }.each() {
                     it.scope*.value = 'compile'
                 }
+
                 //#70 - workaround for empty version in pom.xml when dependency-management-plugin is used
                 //Known limitation of new Gradle publishing mechanism - https://github.com/spring-gradle-plugins/dependency-management-plugin/issues/8
+                //and in addition a workaround for an incorrect version in pom.xml when a version is assigned by resolutionStrategy:
+                //http://forums.gradle.org/gradle/topics/getting-version-of-a-dependency-resolved-with-resolutionstrategy
+                def scopeToConfMapping = [compile: 'compile', runtime: 'runtime', testRuntime: 'test']
+                def scopeResolutionMap = scopeToConfMapping.collectEntries { confName, scope ->
+                    Configuration runtimeConfiguration = project.configurations.getByName(confName)
+                    ResolutionResult resolution = runtimeConfiguration.incoming.resolutionResult // Forces resolve of configuration
+                    Map<ModuleIdentifier, ResolvedComponentResult> resolutionMap = resolution.getAllComponents().collectEntries { ResolvedComponentResult versionResult ->
+                        [versionResult.moduleVersion.module, versionResult]
+                    }
+                    [scope, resolutionMap]
+                }
                 asNode().dependencies[0]?.get('dependency')?.each() { dep ->
                     String pomVer = dep.get("version").text();
-                    String pomArtifactId = dep.get("artifactId").text();
-                    String pomGroupId = dep.get("groupId").text();
-                    if (pomVer.isEmpty()) {
-                        def depVer = project.dependencyManagement.getManagedVersion("$pomGroupId", "$pomArtifactId")
-                        dep.appendNode('version', depVer)
+                    String name = dep.get("artifactId").text();
+                    String group = dep.get("groupId").text();
+                    String scope = dep.get("scope").text();
+
+                    def id = new org.gradle.api.internal.artifacts.DefaultModuleIdentifier(group, name)
+                    ResolvedComponentResult versionResult = scopeResolutionMap.get(scope).get(id)
+                    if(versionResult != null) {
+                        if (!dep.version) {
+                            dep.appendNode('version', versionResult.moduleVersion.version)
+                        } else {
+                            dep.version[0].value = versionResult.moduleVersion.version
+                        }
+                    } else {
+                        if (pomVer.isEmpty()) {
+                            throw new StopExecutionException("Unable to find dependency version to put into pom.xml (dependency: $group:$name)")
+                        }
                     }
                 }
             }
