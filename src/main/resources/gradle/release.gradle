@@ -10,6 +10,7 @@ buildscript {
     dependencies {
         classpath "pl.allegro.tech.build:axion-release-plugin:1.0.0"
         classpath "org._10ne.gradle:rest-gradle-plugin:0.3.1"
+        classpath "org.codehaus.groovy.modules.http-builder:http-builder:0.7.2"
     }
 }
 
@@ -55,13 +56,58 @@ release {
     }
 }
 
+task createReleaseInGitHub(type: org._10ne.gradle.rest.RestTask) {
+    httpMethod = 'post'
+    uri = "https://api.github.com/repos/4finance/${project.name}/releases"
+    requestHeaders = [Authorization: ghToken]
+    requestBody = [
+        tag_name: project.version,
+        name: project.version,
+        body:  "[Changes](https://github.com/4finance/${project.name}/issues?q=milestone%3A${project.version})".toString()
+    ]
+}
+
+task findCurrentGitHubMilestone(type: org._10ne.gradle.rest.RestTask) {
+    uri = "https://api.github.com/repos/4finance/${project.name}/milestones?state=open"
+    doLast {
+        def matchingMilestones = serverResponse.data.grep({it.title == project.version})
+        ext.gitHubMilestoneNumber = matchingMilestones.empty? 0 : matchingMilestones.first().number
+    }
+}
+
+task closeMilestoneBeingReleased(type: org._10ne.gradle.rest.RestTask) {
+    dependsOn findCurrentGitHubMilestone
+    onlyIf { findCurrentGitHubMilestone.gitHubMilestoneNumber }
+    httpMethod = 'patch'
+    uri = ""
+    requestHeaders = [Authorization: ghToken]
+    requestBody = [
+        title: project.version,
+        state: 'closed'
+    ]
+    doFirst {
+        uri = "https://api.github.com/repos/4finance/${project.name}/milestones/${findCurrentGitHubMilestone.gitHubMilestoneNumber}"
+    }
+}
+
+configure([createReleaseInGitHub, findCurrentGitHubMilestone, closeMilestoneBeingReleased]) {
+    requestHeaders = ['User-Agent': 'https://github.com/4finance/micro-common-release']
+    contentType = groovyx.net.http.ContentType.JSON
+}
+
+task gitHubRelease {
+    dependsOn createReleaseInGitHub, closeMilestoneBeingReleased
+    onlyIf {!localRelease}
+}
+
+
 
 import org.ajoberstar.grgit.Commit
 import org.ajoberstar.grgit.Credentials
 import org.ajoberstar.grgit.Grgit
 
 task("finalizeRelease") {
-    dependsOn uploadableProjects.bintrayUpload, releaseNeeded
+    dependsOn uploadableProjects.bintrayUpload, releaseNeeded, gitHubRelease
     onlyIf { releaseNeeded.needed }
     doLast {
         if (dryRun) {
