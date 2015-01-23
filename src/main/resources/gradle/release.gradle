@@ -1,4 +1,6 @@
 //Based on release.gradle from Mockito project by Szczepan Faber - https://github.com/mockito/mockito
+
+//release mechanism should be applied only on a root project
 assert project == rootProject
 
 //To allow to use GrGit and RestTask classes as 'buildscript' closure has to be in every included file
@@ -57,9 +59,12 @@ release {
 }
 
 task createReleaseInGitHub(type: org._10ne.gradle.rest.RestTask) {
+    dependsOn releaseNeeded
+    shouldRunAfter bintrayUpload
+    onlyIf { releaseNeeded.needed && !project.hasProperty('dryRun') }
     httpMethod = 'post'
     uri = "https://api.github.com/repos/4finance/${project.name}/releases"
-    requestHeaders = [Authorization: ghToken]
+    requestHeaders = [Authorization: "token $ghToken"]
     requestBody = [
         tag_name: project.version,
         name: project.version,
@@ -68,19 +73,23 @@ task createReleaseInGitHub(type: org._10ne.gradle.rest.RestTask) {
 }
 
 task findCurrentGitHubMilestone(type: org._10ne.gradle.rest.RestTask) {
+    dependsOn releaseNeeded
+    onlyIf { releaseNeeded.needed && !project.hasProperty('dryRun') }
     uri = "https://api.github.com/repos/4finance/${project.name}/milestones?state=open"
+    requestHeaders = [:]
     doLast {
-        def matchingMilestones = serverResponse.data.grep({it.title == project.version})
-        ext.gitHubMilestoneNumber = matchingMilestones.empty? 0 : matchingMilestones.first().number
+        def matchingMilestones = serverResponse.data.grep({ it.title == project.version })
+        ext.gitHubMilestoneNumber = matchingMilestones.empty ? 0 : matchingMilestones.first().number
     }
 }
 
 task closeMilestoneBeingReleased(type: org._10ne.gradle.rest.RestTask) {
-    dependsOn findCurrentGitHubMilestone
-    onlyIf { findCurrentGitHubMilestone.gitHubMilestoneNumber }
+    dependsOn releaseNeeded, findCurrentGitHubMilestone
+    shouldRunAfter bintrayUpload
+    onlyIf { releaseNeeded.needed && !project.hasProperty('dryRun') && findCurrentGitHubMilestone.gitHubMilestoneNumber }
     httpMethod = 'patch'
-    uri = ""
-    requestHeaders = [Authorization: ghToken]
+    uri = "broken-should-be-overridden-in-do-frst"
+    requestHeaders = [Authorization: "token $ghToken"]
     requestBody = [
         title: project.version,
         state: 'closed'
@@ -91,15 +100,21 @@ task closeMilestoneBeingReleased(type: org._10ne.gradle.rest.RestTask) {
 }
 
 configure([createReleaseInGitHub, findCurrentGitHubMilestone, closeMilestoneBeingReleased]) {
-    requestHeaders = ['User-Agent': 'https://github.com/4finance/micro-common-release']
+    requestHeaders += ['User-Agent': 'https://github.com/4finance/micro-common-release']
     contentType = groovyx.net.http.ContentType.JSON
+//    contentType = 'Accept: application/vnd.github.v3+json'
 }
 
 task gitHubRelease {
-    dependsOn createReleaseInGitHub, closeMilestoneBeingReleased
-    onlyIf {!localRelease}
+    dependsOn releaseNeeded, createReleaseInGitHub, closeMilestoneBeingReleased
+    shouldRunAfter bintrayUpload
+    onlyIf { releaseNeeded.needed }
+    doLast {
+        if (dryRun) {
+            logger.lifecycle "Dry-running gitHubRelease"
+        }
+    }
 }
-
 
 
 import org.ajoberstar.grgit.Commit
@@ -176,7 +191,7 @@ private void configureGit() {
     runCommand "git", "config", "user.email", "4financebot@gmail.com"
     runCommand "git", "config", "user.name", "4Finance Bot"
     runCommand "git", "config", "push.default", "simple"
-    runCommand "git", "remote", "set-url", "origin", new MaskedArg(value: "https://${System.env.GH_TOKEN}@github.com/4finance/releasing-sandbox.git")
+    runCommand "git", "remote", "set-url", "origin", new MaskedArg(value: "https://${System.env.GH_TOKEN}@github.com/4finance/${project.name}.git")
 }
 
 private void runCommand(Object ... args) {
