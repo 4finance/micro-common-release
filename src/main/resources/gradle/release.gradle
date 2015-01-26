@@ -72,6 +72,17 @@ task createReleaseInGitHub(type: org._10ne.gradle.rest.RestTask) {
     ]
 }
 
+import com.github.zafarkhaja.semver.Version
+
+task createNextMilestone(type: org._10ne.gradle.rest.RestTask) {
+    httpMethod = 'post'
+    uri = "https://api.github.com/repos/4finance/${project.name}/milestones"
+    requestHeaders = [Authorization: ghToken]
+    requestBody = [
+        title: Version.valueOf(project.version).incrementPatchVersion().toString()
+    ]
+}
+
 task findCurrentGitHubMilestone(type: org._10ne.gradle.rest.RestTask) {
     dependsOn releaseNeeded
     onlyIf { releaseNeeded.needed && !project.hasProperty('dryRun') }
@@ -99,14 +110,14 @@ task closeMilestoneBeingReleased(type: org._10ne.gradle.rest.RestTask) {
     }
 }
 
-configure([createReleaseInGitHub, findCurrentGitHubMilestone, closeMilestoneBeingReleased]) {
+configure([createReleaseInGitHub, findCurrentGitHubMilestone, closeMilestoneBeingReleased, createNextMilestone]) {
     requestHeaders += ['User-Agent': 'https://github.com/4finance/micro-common-release']
     contentType = groovyx.net.http.ContentType.JSON
 //    contentType = 'Accept: application/vnd.github.v3+json'
 }
 
 task gitHubRelease {
-    dependsOn releaseNeeded, createReleaseInGitHub, closeMilestoneBeingReleased
+    dependsOn releaseNeeded, createReleaseInGitHub, closeMilestoneBeingReleased, createNextMilestone
     shouldRunAfter bintrayUpload
     onlyIf { releaseNeeded.needed }
     doLast {
