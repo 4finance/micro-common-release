@@ -74,15 +74,6 @@ task createReleaseInGitHub(type: org._10ne.gradle.rest.RestTask) {
 
 import com.github.zafarkhaja.semver.Version
 
-task createNextMilestone(type: org._10ne.gradle.rest.RestTask) {
-    httpMethod = 'post'
-    uri = "https://api.github.com/repos/4finance/${project.name}/milestones"
-    requestHeaders = [Authorization: ghToken]
-    requestBody = [
-        title: Version.valueOf(project.version).incrementPatchVersion().toString()
-    ]
-}
-
 task findCurrentGitHubMilestone(type: org._10ne.gradle.rest.RestTask) {
     dependsOn releaseNeeded
     onlyIf { releaseNeeded.needed && !project.hasProperty('dryRun') }
@@ -92,6 +83,18 @@ task findCurrentGitHubMilestone(type: org._10ne.gradle.rest.RestTask) {
         def matchingMilestones = serverResponse.data.grep({ it.title == project.version })
         ext.gitHubMilestoneNumber = matchingMilestones.empty ? 0 : matchingMilestones.first().number
     }
+}
+
+task createNextGitHubMilestone(type: org._10ne.gradle.rest.RestTask) {
+    dependsOn releaseNeeded, findCurrentGitHubMilestone
+    shouldRunAfter bintrayUpload
+    onlyIf { releaseNeeded.needed && !project.hasProperty('dryRun') && findCurrentGitHubMilestone.gitHubMilestoneNumber }
+    httpMethod = 'post'
+    uri = "https://api.github.com/repos/4finance/${project.name}/milestones"
+    requestHeaders = [Authorization: ghToken]
+    requestBody = [
+        title: Version.valueOf(project.version).incrementPatchVersion().toString()
+    ]
 }
 
 task closeMilestoneBeingReleased(type: org._10ne.gradle.rest.RestTask) {
@@ -110,14 +113,14 @@ task closeMilestoneBeingReleased(type: org._10ne.gradle.rest.RestTask) {
     }
 }
 
-configure([createReleaseInGitHub, findCurrentGitHubMilestone, closeMilestoneBeingReleased, createNextMilestone]) {
+configure([createReleaseInGitHub, findCurrentGitHubMilestone, closeMilestoneBeingReleased, createNextGitHubMilestone]) {
     requestHeaders += ['User-Agent': 'https://github.com/4finance/micro-common-release']
     contentType = groovyx.net.http.ContentType.JSON
 //    contentType = 'Accept: application/vnd.github.v3+json'
 }
 
 task gitHubRelease {
-    dependsOn releaseNeeded, createReleaseInGitHub, closeMilestoneBeingReleased, createNextMilestone
+    dependsOn releaseNeeded, createReleaseInGitHub, closeMilestoneBeingReleased, createNextGitHubMilestone
     shouldRunAfter bintrayUpload
     onlyIf { releaseNeeded.needed }
     doLast {
