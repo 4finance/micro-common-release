@@ -4,9 +4,9 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath "pl.allegro.tech.build:axion-release-plugin:1.0.0"
-        classpath "org._10ne.gradle:rest-gradle-plugin:0.3.1"
-        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.0'
+        classpath "pl.allegro.tech.build:axion-release-plugin:1.2.0"
+        classpath "org._10ne.gradle:rest-gradle-plugin:0.3.2"
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.1'
     }
 }
 
@@ -41,9 +41,9 @@ dependencies {
     compile gradleApi()
     compile localGroovy()
 
-    compile "pl.allegro.tech.build:axion-release-plugin:1.0.0"
-    compile "org._10ne.gradle:rest-gradle-plugin:0.3.1"
-    compile 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.0'
+    compile "pl.allegro.tech.build:axion-release-plugin:1.2.0"
+    compile "org._10ne.gradle:rest-gradle-plugin:0.3.2"
+    compile 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.1'
 
     testCompile 'org.spockframework:spock-core:0.7-groovy-2.0'
     testCompile 'junit:junit:4.11'
