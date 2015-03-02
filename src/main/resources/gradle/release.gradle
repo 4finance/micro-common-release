@@ -145,9 +145,9 @@ configure(uploadableProjects) {
         requestBody = [discard: 'false']
 
         doFirst {
-            println "RB: ${requestBody}"
-            //Update uri with 'bintray.pkg.repo' override in end project
-            uri = "https://api.bintray.com/content/4finance/${bintray.pkg.repo}/${project.name}/${project.version}/publish"
+            //Update uri with 'bintray.pkg.repo' and package user overridden in end project
+            def packageUser = bintray.pkg.userOrg ?: bintray.user
+            uri = "https://api.bintray.com/content/$packageUser/${bintray.pkg.repo}/${project.name}/${project.version}/publish"
         }
     }
 }
