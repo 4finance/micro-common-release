@@ -1,4 +1,4 @@
-micro-common-release [![Build Status](https://travis-ci.org/4finance/releasing-sandbox.svg)](https://travis-ci.org/4finance/releasing-sandbox)
+micro-common-release [![Build Status](https://travis-ci.org/4finance/micro-common-release.svg)](https://travis-ci.org/4finance/micro-common-release)
 =======================
 
 Common configuration for automatic version release from CI server.
