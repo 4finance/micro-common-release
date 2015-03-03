@@ -1,12 +1,16 @@
+
 buildscript {
+    ext {
+        axionPluginVersion = "1.2.0"
+        restPluginVersion = "0.3.2"
+        bintrayPluginVersion = "1.1"
+    }
     repositories {
-        mavenLocal()
         jcenter()
     }
     dependencies {
-        classpath "pl.allegro.tech.build:axion-release-plugin:1.2.0"
-        classpath "org._10ne.gradle:rest-gradle-plugin:0.3.2"
-        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.1'
+        classpath "pl.allegro.tech.build:axion-release-plugin:${axionPluginVersion}"
+        classpath "com.jfrog.bintray.gradle:gradle-bintray-plugin:${bintrayPluginVersion}"
     }
 }
 
@@ -41,10 +45,26 @@ dependencies {
     compile gradleApi()
     compile localGroovy()
 
-    compile "pl.allegro.tech.build:axion-release-plugin:1.2.0"
-    compile "org._10ne.gradle:rest-gradle-plugin:0.3.2"
-    compile 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.1'
+    compile "pl.allegro.tech.build:axion-release-plugin:${axionPluginVersion}"
+    compile "org._10ne.gradle:rest-gradle-plugin:${restPluginVersion}"
+    compile "com.jfrog.bintray.gradle:gradle-bintray-plugin:${bintrayPluginVersion}"
 
     testCompile 'org.spockframework:spock-core:0.7-groovy-2.0'
     testCompile 'junit:junit:4.11'
+}
+
+//Replace placeholders in files packages to JAR with the current versions
+processResources {
+    //expand cannot be used as it tries to resolve all placeholders
+    //filter with ReplaceTokens cannot be used as by default it uses '@' token and cannot be overridden (final class)
+    //TODO: Ugly hack - if you know a better way PR is welcome
+    filter { String line ->
+        String out = line
+        project.ext.getProperties().each { Map.Entry<String, Object> extProp ->
+            if (extProp.key.endsWith("Version") && out.contains('${' + extProp.key + '}')) {
+                out = line.replaceAll('\\$\\{' + extProp.key + '\\}', (String)(extProp.value)) //works better
+            }
+        }
+        return out
+    }
 }

@@ -6,12 +6,11 @@ assert project == rootProject
 //To allow to use GrGit and RestTask classes as 'buildscript' closure has to be in every included file
 buildscript {
     repositories {
-        mavenLocal()
         jcenter()
     }
     dependencies {
-        classpath "pl.allegro.tech.build:axion-release-plugin:1.2.0"
-        classpath "org._10ne.gradle:rest-gradle-plugin:0.3.2"
+        classpath "pl.allegro.tech.build:axion-release-plugin:${axionPluginVersion}"
+        classpath "org._10ne.gradle:rest-gradle-plugin:${restPluginVersion}"
         classpath "org.codehaus.groovy.modules.http-builder:http-builder:0.7.2" //to override old version in rest-gradle-plugin
     }
 }
@@ -86,6 +85,7 @@ task findCurrentGitHubMilestone(type: org._10ne.gradle.rest.RestTask) {
     doLast {
         def matchingMilestones = serverResponse.data.grep({ it.title == project.version })
         ext.gitHubMilestoneNumber = matchingMilestones.empty ? 0 : matchingMilestones.first().number
+        logger.info("Received current GitHub milestone: ${ext.gitHubMilestoneNumber}")
     }
 }
 
