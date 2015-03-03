@@ -5,6 +5,9 @@ assert project == rootProject
 
 //To allow to use GrGit and RestTask classes as 'buildscript' closure has to be in every included file
 buildscript {
+    ext {
+        ghToken = System.env.GH_TOKEN ?: "" //Here to be visible also in github.gradle
+    }
     repositories {
         jcenter()
     }
@@ -17,7 +20,6 @@ buildscript {
 
 def dryRun = project.hasProperty('dryRun')
 def branch = System.env.TRAVIS_BRANCH
-def ghToken = System.env.GH_TOKEN ?: ""
 def ghUser = System.env.GH_USER ?: "4financeBot"
 boolean localRelease = project.hasProperty("localRelease")
 boolean isTriggerInCommit = isReleaseTriggerInLastCommitMessage(localRelease)
@@ -57,84 +59,13 @@ release {
     }
 }
 
-task createReleaseInGitHub(type: org._10ne.gradle.rest.RestTask) {
-    dependsOn { releaseNeeded }
-    shouldRunAfter { bintrayUpload }
-    onlyIf { releaseNeeded.needed && !project.hasProperty('dryRun') }
-    httpMethod = 'post'
-    uri = "https://api.github.com/repos/4finance/${project.name}/releases"
-    requestHeaders = [Authorization: "token $ghToken"]
-    requestBody = [
-        tag_name: project.version,
-        name: project.version,
-        body:  "[Changes](https://github.com/4finance/${project.name}/issues?q=milestone%3A${project.version})".toString()
-    ]
-}
-
-import com.github.zafarkhaja.semver.Version
 import org.ajoberstar.grgit.Commit
 import org.ajoberstar.grgit.Credentials
 import org.ajoberstar.grgit.Grgit
 
-task findCurrentGitHubMilestone(type: org._10ne.gradle.rest.RestTask) {
-    dependsOn { releaseNeeded }
-    onlyIf { releaseNeeded.needed && !project.hasProperty('dryRun') }
-    uri = "https://api.github.com/repos/4finance/${project.name}/milestones?state=open"
-    requestHeaders = [:]
-    doLast {
-        def matchingMilestones = serverResponse.data.grep({ it.title == project.version })
-        ext.gitHubMilestoneNumber = matchingMilestones.empty ? 0 : matchingMilestones.first().number
-        logger.info("Received current GitHub milestone: ${ext.gitHubMilestoneNumber}")
-    }
-}
-
-task createNextGitHubMilestone(type: org._10ne.gradle.rest.RestTask) {
-    dependsOn { [releaseNeeded, findCurrentGitHubMilestone] }
-    shouldRunAfter { bintrayUpload }
-    onlyIf { releaseNeeded.needed && !project.hasProperty('dryRun') && findCurrentGitHubMilestone.gitHubMilestoneNumber }
-    httpMethod = 'post'
-    uri = "https://api.github.com/repos/4finance/${project.name}/milestones"
-    requestHeaders = [Authorization: ghToken]
-    requestBody = [
-        title: Version.valueOf(project.version).incrementPatchVersion().toString()
-    ]
-}
-
-task closeMilestoneBeingReleased(type: org._10ne.gradle.rest.RestTask) {
-    dependsOn { [releaseNeeded, findCurrentGitHubMilestone] }
-    shouldRunAfter { bintrayUpload }
-    onlyIf { releaseNeeded.needed && !project.hasProperty('dryRun') && findCurrentGitHubMilestone.gitHubMilestoneNumber }
-    httpMethod = 'patch'
-    uri = "broken-should-be-overridden-in-do-frst"
-    requestHeaders = [Authorization: "token $ghToken"]
-    requestBody = [
-        title: project.version,
-        state: 'closed'
-    ]
-    doFirst {
-        uri = "https://api.github.com/repos/4finance/${project.name}/milestones/${findCurrentGitHubMilestone.gitHubMilestoneNumber}"
-    }
-}
-
-configure([createReleaseInGitHub, findCurrentGitHubMilestone, closeMilestoneBeingReleased, createNextGitHubMilestone]) {
-    requestHeaders += ['User-Agent': 'https://github.com/4finance/micro-common-release']
-    contentType = groovyx.net.http.ContentType.JSON
-}
-
-task gitHubRelease {
-    //TODO: Disabled due to https://github.com/4finance/micro-common-release/issues/12
-    dependsOn { [releaseNeeded, /*createReleaseInGitHub,*/ closeMilestoneBeingReleased /*, createNextGitHubMilestone */] }
-    shouldRunAfter { bintrayUpload }
-    onlyIf { releaseNeeded.needed }
-    doLast {
-        if (dryRun) {
-            logger.lifecycle "Dry-running gitHubRelease"
-        }
-    }
-}
 
 task("finalizeRelease") {
-    dependsOn { [uploadableProjects.bintrayUpload, releaseNeeded, gitHubRelease] }
+    dependsOn { [uploadableProjects.bintrayUpload, releaseNeeded] }
     onlyIf { releaseNeeded.needed }
     doLast {
         if (dryRun) {
