@@ -38,7 +38,7 @@ task("releaseNeeded") {
 Set uploadableProjects = allprojects.findAll { sProject -> sProject.tasks.matching { it.name == "bintrayUpload" }}
 
 uploadableProjects*.bintrayUpload {
-    dependsOn releaseNeeded
+    dependsOn { releaseNeeded }
     onlyIf { releaseNeeded.needed }
     doFirst {
         if (dryRun) {
@@ -48,7 +48,7 @@ uploadableProjects*.bintrayUpload {
 }
 
 release {
-    dependsOn releaseNeeded
+    dependsOn { releaseNeeded }
     onlyIf { releaseNeeded.needed }
     doFirst {
         if (dryRun) {
@@ -58,8 +58,8 @@ release {
 }
 
 task createReleaseInGitHub(type: org._10ne.gradle.rest.RestTask) {
-    dependsOn releaseNeeded
-    shouldRunAfter bintrayUpload
+    dependsOn { releaseNeeded }
+    shouldRunAfter { bintrayUpload }
     onlyIf { releaseNeeded.needed && !project.hasProperty('dryRun') }
     httpMethod = 'post'
     uri = "https://api.github.com/repos/4finance/${project.name}/releases"
@@ -71,14 +71,13 @@ task createReleaseInGitHub(type: org._10ne.gradle.rest.RestTask) {
     ]
 }
 
-
 import com.github.zafarkhaja.semver.Version
 import org.ajoberstar.grgit.Commit
 import org.ajoberstar.grgit.Credentials
 import org.ajoberstar.grgit.Grgit
 
 task findCurrentGitHubMilestone(type: org._10ne.gradle.rest.RestTask) {
-    dependsOn releaseNeeded
+    dependsOn { releaseNeeded }
     onlyIf { releaseNeeded.needed && !project.hasProperty('dryRun') }
     uri = "https://api.github.com/repos/4finance/${project.name}/milestones?state=open"
     requestHeaders = [:]
@@ -90,8 +89,8 @@ task findCurrentGitHubMilestone(type: org._10ne.gradle.rest.RestTask) {
 }
 
 task createNextGitHubMilestone(type: org._10ne.gradle.rest.RestTask) {
-    dependsOn releaseNeeded, findCurrentGitHubMilestone
-    shouldRunAfter bintrayUpload
+    dependsOn { [releaseNeeded, findCurrentGitHubMilestone] }
+    shouldRunAfter { bintrayUpload }
     onlyIf { releaseNeeded.needed && !project.hasProperty('dryRun') && findCurrentGitHubMilestone.gitHubMilestoneNumber }
     httpMethod = 'post'
     uri = "https://api.github.com/repos/4finance/${project.name}/milestones"
@@ -102,8 +101,8 @@ task createNextGitHubMilestone(type: org._10ne.gradle.rest.RestTask) {
 }
 
 task closeMilestoneBeingReleased(type: org._10ne.gradle.rest.RestTask) {
-    dependsOn releaseNeeded, findCurrentGitHubMilestone
-    shouldRunAfter bintrayUpload
+    dependsOn { [releaseNeeded, findCurrentGitHubMilestone] }
+    shouldRunAfter { bintrayUpload }
     onlyIf { releaseNeeded.needed && !project.hasProperty('dryRun') && findCurrentGitHubMilestone.gitHubMilestoneNumber }
     httpMethod = 'patch'
     uri = "broken-should-be-overridden-in-do-frst"
@@ -124,8 +123,8 @@ configure([createReleaseInGitHub, findCurrentGitHubMilestone, closeMilestoneBein
 
 task gitHubRelease {
     //TODO: Disabled due to https://github.com/4finance/micro-common-release/issues/12
-    dependsOn releaseNeeded, /*createReleaseInGitHub,*/ closeMilestoneBeingReleased /*, createNextGitHubMilestone */
-    shouldRunAfter bintrayUpload
+    dependsOn { [releaseNeeded, /*createReleaseInGitHub,*/ closeMilestoneBeingReleased /*, createNextGitHubMilestone */] }
+    shouldRunAfter { bintrayUpload }
     onlyIf { releaseNeeded.needed }
     doLast {
         if (dryRun) {
@@ -135,7 +134,7 @@ task gitHubRelease {
 }
 
 task("finalizeRelease") {
-    dependsOn uploadableProjects.bintrayUpload, releaseNeeded, gitHubRelease
+    dependsOn { [uploadableProjects.bintrayUpload, releaseNeeded, gitHubRelease] }
     onlyIf { releaseNeeded.needed }
     doLast {
         if (dryRun) {
@@ -162,8 +161,8 @@ task("finalizeRelease") {
 
 configure(uploadableProjects) {
     task publishUploadedArtifacts(type: org._10ne.gradle.rest.RestTask) {
-        dependsOn releaseNeeded
-        mustRunAfter finalizeRelease
+        dependsOn { releaseNeeded }
+        mustRunAfter { finalizeRelease }
         onlyIf { releaseNeeded.needed && !project.hasProperty('dryRun') }   //TODO: Not available in rest-gradle-plugin yet - https://github.com/noamt/rest-gradle-plugin/issues/9
         httpMethod = 'post'
         uri = "broken-should-be-overridden-in-do-frst"
