@@ -7,6 +7,7 @@ assert project == rootProject
 buildscript {
     ext {
         ghToken = System.env.GH_TOKEN ?: "" //Here to be visible also in github.gradle
+        dryRun = project.hasProperty('dryRun')
     }
     repositories {
         jcenter()
@@ -18,7 +19,6 @@ buildscript {
     }
 }
 
-def dryRun = project.hasProperty('dryRun')
 def branch = System.env.TRAVIS_BRANCH
 def ghUser = System.env.GH_USER ?: "4financeBot"
 boolean localRelease = project.hasProperty("localRelease")
