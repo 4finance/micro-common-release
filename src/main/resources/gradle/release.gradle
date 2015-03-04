@@ -88,6 +88,8 @@ task("finalizeRelease") {
             grgit.push(pushParams)
         }
     }
+    description "Finalizes release - pushes release commit and tag back to GitHub"
+    group "release"
 }
 
 configure(uploadableProjects) {
@@ -107,6 +109,8 @@ configure(uploadableProjects) {
             def packageUser = bintray.pkg.userOrg ?: bintray.user
             uri = "https://api.bintray.com/content/$packageUser/${bintray.pkg.repo}/${project.name}/${project.version}/publish"
         }
+        description "Publishes uploaded artifacts in Bintray - makes them publicly available"
+        group "publishing"
     }
 }
 
