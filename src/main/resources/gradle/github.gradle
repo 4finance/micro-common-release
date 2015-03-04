@@ -77,7 +77,7 @@ task gitHubRelease {
     shouldRunAfter { bintrayUpload }
     onlyIf { releaseNeeded.needed }
     doLast {
-        if (dryRun) {
+        if (project.hasProperty('dryRun')) {
             logger.lifecycle "Dry-running gitHubRelease"
         }
     }
