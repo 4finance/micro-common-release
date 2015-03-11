@@ -8,13 +8,13 @@ bintray {
     key = project.hasProperty('bintrayKey') ? project.getProperty('bintrayKey') : System.properties['bintrayKey']
     publications = ['mavenJava']
     dryRun = project.hasProperty('dryRun')
+    publish = false
     pkg {
         repo = 'micro'
         userOrg = '4finance'
         name = project.name
         desc = project.description
         licenses = ['Apache-2.0']
-        publish = false
     }
 }
 
