@@ -123,9 +123,9 @@ private boolean isReleaseTriggerInLastCommitMessage(boolean isLocalRelease) {
     if (isLocalRelease) {
         history = grgit.log(maxCommits: 1)
     } else {
-        def travisBranch = System.env.TRAVIS_BRANCH
-        if (travisBranch != null) {
-            history = grgit.log(includes: [travisBranch], maxCommits: 1)
+        def buildCommit = System.env.TRAVIS_COMMIT   //or TRAVIS_COMMIT_RANGE to check for a triggering command?
+        if (buildCommit != null) {
+            history = grgit.log(includes: [buildCommit], maxCommits: 1)
         }
     }
 
