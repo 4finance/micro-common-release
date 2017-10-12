@@ -1,19 +1,23 @@
 language: groovy
+
 jdk:
 - oraclejdk8
+
 before_install:
 - git --version
 - echo $GRADLE_OPTS
 - export GRADLE_OPTS='-Dorg.gradle.daemon=true'
+
 install:
-- "./gradlew assemble"
+- ./gradlew assemble
+
 script:
 - set -e
-- "./gradlew check --info --stacktrace --continue"
+- ./gradlew check --info --stacktrace --continue
 - source src/main/resources/gradle/setGitVariables.sh
-- "./gradlew release -Prelease.disableRemoteCheck -Prelease.localOnly --info --stacktrace"
-- "./gradlew finalizeRelease publishUploadedArtifacts -PbintrayUser=${BINTRAY_USER}
-  -PbintrayKey=${BINTRAY_API_KEY} --info --stacktrace"
+- ./gradlew release -Prelease.disableRemoteCheck -Prelease.localOnly --info --stacktrace
+- ./gradlew finalizeRelease publishUploadedArtifacts -PbintrayUser=${BINTRAY_USER} -PbintrayKey=${BINTRAY_API_KEY} --info --stacktrace
+
 env:
   global:
   - TERM=dumb
